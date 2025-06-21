@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Steuerung (Test)</title>
+  <title>Volcano Hybrid Test Control</title>
 </head>
 <body>
-  <h2>Volcano Hybrid Steuerung</h2>
-  <button onclick="connect()">🔗 Verbinden</button>
-  <button onclick="setTemp()">🌡️ Temperatur auf 185°C</button>
-  <button onclick="heatOn()">🔥 Heizung starten</button>
-  <button onclick="pumpOn()">💨 Pumpe starten</button>
-  <p id="status">Status: Nicht verbunden</p>
+  <h2>Volcano Hybrid - Basic Bluetooth Test</h2>
+  <button onclick="connect()">🔗 Connect to Volcano</button>
+  <button onclick="setTemp()">🌡️ Set Temperature to 185°C</button>
+  <button onclick="heatOn()">🔥 Turn On Heater</button>
+  <button onclick="pumpOn()">💨 Start Pump</button>
+  <p id="status">Status: Not connected</p>
 
   <script>
     let server, service;
@@ -19,34 +19,54 @@
     async function connect() {
       try {
         const device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: "Volcano" }],
+          acceptAllDevices: true,
           optionalServices: [serviceUUID]
         });
-        document.getElementById("status").innerText = "Status: Verbinde...";
+
+        document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
+
         server = await device.gatt.connect();
         service = await server.getPrimaryService(serviceUUID);
-        document.getElementById("status").innerText = "Status: Verbunden!";
-      } catch (error) {
-        document.getElementById("status").innerText = "Fehler: " + error;
+
+        document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
+        console.log("Connected to device:", device);
+      } catch (err) {
+        document.getElementById("status").innerText = `Connection failed: ${err.message}`;
+        console.error("Connection error:", err);
       }
     }
 
     async function setTemp() {
-      const char = await service.getCharacteristic('10110003-5354-4f52-5a26-4249434b454c');
-      const temp = 1850; // = 185.0°C
-      const buf = new ArrayBuffer(2);
-      new DataView(buf).setUint16(0, temp, true);
-      await char.writeValue(buf);
+      try {
+        const characteristic = await service.getCharacteristic('10110003-5354-4f52-5a26-4249434b454c');
+        const targetTemp = 1850; // 185.0°C in tenths
+        const buffer = new ArrayBuffer(2);
+        new DataView(buffer).setUint16(0, targetTemp, true);
+        await characteristic.writeValue(buffer);
+        console.log("Target temperature set to 185.0°C");
+      } catch (err) {
+        console.error("setTemp error:", err);
+      }
     }
 
     async function heatOn() {
-      const char = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
-      await char.writeValue(new Uint8Array([0x01]));
+      try {
+        const characteristic = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
+        await characteristic.writeValue(new Uint8Array([0x01]));
+        console.log("Heater turned ON");
+      } catch (err) {
+        console.error("heatOn error:", err);
+      }
     }
 
     async function pumpOn() {
-      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-      await char.writeValue(new Uint8Array([0x01]));
+      try {
+        const characteristic = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+        await characteristic.writeValue(new Uint8Array([0x01]));
+        console.log("Pump started");
+      } catch (err) {
+        console.error("pumpOn error:", err);
+      }
     }
   </script>
 </body>
