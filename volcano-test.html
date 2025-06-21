@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control</title>
+  <title>Volcano Hybrid Test Control v0.17</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.17)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -22,6 +22,7 @@
   <p>Current Temperature: <span id="currentTemp">-</span>°C</p>
   <p>Heater Status: <span id="heaterStatus">Unknown</span></p>
   <p>Pump Status: <span id="pumpStatus">Unknown</span></p>
+  <p>Firmware Version: <span id="firmwareVersion">-</span></p>
   <div id="log"></div>
 
   <script>
@@ -54,11 +55,26 @@
         document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
         log("Connected to device: " + device.name);
 
+        await readFirmwareVersion();
         setInterval(updateStatuses, 3000);
 
       } catch (err) {
         document.getElementById("status").innerText = `Connection failed: ${err.message}`;
         log("Connection error: " + err);
+      }
+    }
+
+    async function readFirmwareVersion() {
+      try {
+        const fwService = await server.getPrimaryService('10100000-5354-4f52-5a26-4249434b454c');
+        const fwChar = await fwService.getCharacteristic('10100003-5354-4f52-5a26-4249434b454c');
+        const value = await fwChar.readValue();
+        const decoder = new TextDecoder("utf-8");
+        const fw = decoder.decode(value);
+        document.getElementById("firmwareVersion").innerText = fw.substring(0, 8);
+        log("🆕 Firmware Version: " + fw);
+      } catch (e) {
+        log("⚠️ Error reading firmware version: " + e);
       }
     }
 
@@ -163,7 +179,7 @@
           .then(svc => svc.getCharacteristic('1010000d-5354-4f52-5a26-4249434b454c'));
         const prj2Val = await prj2Char.readValue();
         const prj2 = new DataView(prj2Val.buffer).getUint16(0, true);
-        const heaterOn = (prj2 & 0x0004) === 0; // MASK_PRJSTAT2_VOLCANO_HEATER_OFF
+        const heaterOn = (prj2 & 0x0004) === 0;
         document.getElementById("heaterStatus").innerText = heaterOn ? "ON" : "OFF";
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
