@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Volcano Steuerung (Test)</title>
+</head>
+<body>
+  <h2>Volcano Hybrid Steuerung</h2>
+  <button onclick="connect()">🔗 Verbinden</button>
+  <button onclick="setTemp()">🌡️ Temperatur auf 185°C</button>
+  <button onclick="heatOn()">🔥 Heizung starten</button>
+  <button onclick="pumpOn()">💨 Pumpe starten</button>
+  <p id="status">Status: Nicht verbunden</p>
+
+  <script>
+    let server, service;
+    const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
+
+    async function connect() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: "Volcano" }],
+          optionalServices: [serviceUUID]
+        });
+        document.getElementById("status").innerText = "Status: Verbinde...";
+        server = await device.gatt.connect();
+        service = await server.getPrimaryService(serviceUUID);
+        document.getElementById("status").innerText = "Status: Verbunden!";
+      } catch (error) {
+        document.getElementById("status").innerText = "Fehler: " + error;
+      }
+    }
+
+    async function setTemp() {
+      const char = await service.getCharacteristic('10110003-5354-4f52-5a26-4249434b454c');
+      const temp = 1850; // = 185.0°C
+      const buf = new ArrayBuffer(2);
+      new DataView(buf).setUint16(0, temp, true);
+      await char.writeValue(buf);
+    }
+
+    async function heatOn() {
+      const char = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
+      await char.writeValue(new Uint8Array([0x01]));
+    }
+
+    async function pumpOn() {
+      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      await char.writeValue(new Uint8Array([0x01]));
+    }
+  </script>
+</body>
+</html>
