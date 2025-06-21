@@ -108,15 +108,13 @@
     async function startHeater() {
       const char = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x01]));
-      document.getElementById("heaterStatus").innerText = "ON";
-      log("🔥 Heater started");
+      log("🔥 Heater ON command sent");
     }
 
     async function stopHeater() {
       const char = await service.getCharacteristic('10110010-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x01]));
-      document.getElementById("heaterStatus").innerText = "OFF";
-      log("🛑 Heater stopped");
+      log("🛑 Heater OFF command sent");
     }
 
     async function waitForTemp(targetTemp) {
@@ -156,10 +154,11 @@
 
     async function updateStatuses() {
       try {
-        const heatChar = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
-        const heaterValue = await heatChar.readValue();
-        const heaterStatus = heaterValue.getUint8(0) === 1 ? "ON" : "OFF";
-        document.getElementById("heaterStatus").innerText = heaterStatus;
+        const char = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
+        const value = await char.readValue();
+        const temp = new DataView(value.buffer).getUint16(0, true);
+        document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
+        // HeaterStatus live status removed to prevent mismatch
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
       }
