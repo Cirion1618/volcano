@@ -162,7 +162,7 @@
     }
 
     async function stopPump() {
-      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      const char = await service.getCharacteristic('10110014-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump stopped");
