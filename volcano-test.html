@@ -64,12 +64,22 @@
 
     async function runWorkflowX() {
       abortFlag = false;
+      log("=========================");
+      log("🚀 Starting Workflow X");
+      log("Temperatures: " + workflowX_temperature.join(", ") + " °C");
+      log("Hold Times: " + workflowX_holdTimeInMilliSeconds.map(ms => ms / 1000 + "s").join(", "));
+      log("Pump Times: " + workflowX_pumpTimeInMilliSeconds.map(ms => ms / 1000 + "s").join(", "));
+      log("=========================");
+
       for (let i = 0; i < workflowX_temperature.length; i++) {
         if (abortFlag) {
           log("🚫 Workflow aborted");
+          await stopPump();
+          await stopHeater();
           return;
         }
         const targetTemp = workflowX_temperature[i] * 10;
+        await stopPump();
         await setTemperature(targetTemp);
         await startHeater();
         await waitForTemp(targetTemp);
@@ -78,6 +88,7 @@
         if (abortFlag) break;
         await startPump(workflowX_pumpTimeInMilliSeconds[i]);
       }
+      await stopPump();
       await stopHeater();
       log("✅ Workflow X completed or aborted");
     }
@@ -133,6 +144,11 @@
       document.getElementById("pumpStatus").innerText = "ON";
       log("💨 Pump started");
       await new Promise(resolve => setTimeout(resolve, duration));
+      await stopPump();
+    }
+
+    async function stopPump() {
+      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump stopped");
@@ -141,12 +157,9 @@
     async function updateStatuses() {
       try {
         const heatChar = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
-        const pumpChar = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-
         const heaterValue = await heatChar.readValue();
         const heaterStatus = heaterValue.getUint8(0) === 1 ? "ON" : "OFF";
         document.getElementById("heaterStatus").innerText = heaterStatus;
-
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
       }
