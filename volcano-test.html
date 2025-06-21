@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.17</title>
+  <title>Volcano Hybrid Test Control v0.18</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.17)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.18)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -102,7 +102,9 @@
         if (abortFlag) break;
         await hold(workflowX_holdTimeInMilliSeconds[i]);
         if (abortFlag) break;
-        await startPump(workflowX_pumpTimeInMilliSeconds[i]);
+        await startPumpOnly();
+        await new Promise(resolve => setTimeout(resolve, workflowX_pumpTimeInMilliSeconds[i]));
+        await stopPump();
       }
       await stopPump();
       await stopHeater();
@@ -152,17 +154,15 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function startPump(duration) {
+    async function startPumpOnly() {
       const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x01]));
       document.getElementById("pumpStatus").innerText = "ON";
       log("💨 Pump started");
-      await new Promise(resolve => setTimeout(resolve, duration));
-      await stopPump();
     }
 
     async function stopPump() {
-      const char = await service.getCharacteristic('10110014-5354-4f52-5a26-4249434b454c');
+      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump stopped");
