@@ -43,7 +43,7 @@
       try {
         const device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
-          optionalServices: [serviceUUID]
+          optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
         });
 
         document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
@@ -154,11 +154,17 @@
 
     async function updateStatuses() {
       try {
-        const char = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
-        const value = await char.readValue();
-        const temp = new DataView(value.buffer).getUint16(0, true);
+        const tempChar = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
+        const tempVal = await tempChar.readValue();
+        const temp = new DataView(tempVal.buffer).getUint16(0, true);
         document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
-        // HeaterStatus live status removed to prevent mismatch
+
+        const prj2Char = await server.getPrimaryService('10100000-5354-4f52-5a26-4249434b454c')
+          .then(svc => svc.getCharacteristic('1010000d-5354-4f52-5a26-4249434b454c'));
+        const prj2Val = await prj2Char.readValue();
+        const prj2 = new DataView(prj2Val.buffer).getUint16(0, true);
+        const heaterOn = (prj2 & 0x0004) === 0; // MASK_PRJSTAT2_VOLCANO_HEATER_OFF
+        document.getElementById("heaterStatus").innerText = heaterOn ? "ON" : "OFF";
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
       }
