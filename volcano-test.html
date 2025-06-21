@@ -54,7 +54,6 @@
         document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
         log("Connected to device: " + device.name);
 
-        // Start polling heater and pump status
         setInterval(updateStatuses, 3000);
 
       } catch (err) {
@@ -72,11 +71,15 @@
         }
         const targetTemp = workflowX_temperature[i] * 10;
         await setTemperature(targetTemp);
+        await startHeater();
         await waitForTemp(targetTemp);
+        if (abortFlag) break;
         await hold(workflowX_holdTimeInMilliSeconds[i]);
+        if (abortFlag) break;
         await startPump(workflowX_pumpTimeInMilliSeconds[i]);
       }
-      log("✅ Workflow X completed");
+      await stopHeater();
+      log("✅ Workflow X completed or aborted");
     }
 
     function abortWorkflow() {
@@ -91,10 +94,25 @@
       log(`🌡️ Set temperature to ${tempInTenthDegrees / 10}°C`);
     }
 
+    async function startHeater() {
+      const char = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
+      await char.writeValue(new Uint8Array([0x01]));
+      document.getElementById("heaterStatus").innerText = "ON";
+      log("🔥 Heater started");
+    }
+
+    async function stopHeater() {
+      const char = await service.getCharacteristic('10110010-5354-4f52-5a26-4249434b454c');
+      await char.writeValue(new Uint8Array([0x01]));
+      document.getElementById("heaterStatus").innerText = "OFF";
+      log("🛑 Heater stopped");
+    }
+
     async function waitForTemp(targetTemp) {
       const char = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
       let temp = 0;
       while (Math.abs(temp - targetTemp) > 10) {
+        if (abortFlag) return;
         const value = await char.readValue();
         temp = new DataView(value.buffer).getUint16(0, true);
         document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
@@ -128,8 +146,6 @@
         const heaterValue = await heatChar.readValue();
         const heaterStatus = heaterValue.getUint8(0) === 1 ? "ON" : "OFF";
         document.getElementById("heaterStatus").innerText = heaterStatus;
-
-        // Pump status is inferred from UI, no direct read characteristic known
 
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
