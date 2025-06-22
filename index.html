@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control</title>
+  <title>Volcano Hybrid Test Control v0.27</title>
   <style>
     #log {
       max-height: 200px;
@@ -11,130 +11,53 @@
       padding: 1em;
       font-family: monospace;
     }
+    #workflowInput {
+      margin-top: 1em;
+      background: #e0e0e0;
+      padding: 1em;
+      font-family: sans-serif;
+    }
+    .bar-container {
+      width: 100%;
+      background-color: #ccc;
+      margin-top: 1em;
+    }
+    .bar {
+      height: 20px;
+      width: 0%;
+      background-color: #76c7c0;
+      transition: width 0.5s;
+    }
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.27)</h2>
+
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
+  <button onclick="runManualWorkflow()">▶️ Run Manual Workflow</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
+
   <p id="status">Status: Not connected</p>
   <p>Current Temperature: <span id="currentTemp">-</span>°C</p>
   <p>Heater Status: <span id="heaterStatus">Unknown</span></p>
   <p>Pump Status: <span id="pumpStatus">Unknown</span></p>
+  <p>Firmware Version: <span id="firmwareVersion">-</span></p>
+
+  <div id="workflowInput">
+    <label>Manual Workflow:<br>
+      Temperatures (comma): <input id="tempInput" size="50"><br>
+      Hold Times ms (comma): <input id="holdInput" size="50"><br>
+      Pump Times ms (comma): <input id="pumpInput" size="50"><br>
+    </label>
+  </div>
+
+  <div class="bar-container">
+    <div id="progressBar" class="bar"></div>
+  </div>
+
   <div id="log"></div>
 
-  <script>
-    let server, service;
-    let abortFlag = false;
-    const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
-
-    const workflowX_temperature = [175, 180, 185, 190, 195];
-    const workflowX_holdTimeInMilliSeconds = [7000, 7000, 0, 0, 0];
-    const workflowX_pumpTimeInMilliSeconds = [7000, 7000, 7000, 7000, 10000];
-
-    function log(msg) {
-      const el = document.getElementById("log");
-      el.innerText += msg + "\n";
-      el.scrollTop = el.scrollHeight;
-    }
-
-    async function connect() {
-      try {
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [serviceUUID]
-        });
-
-        document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-
-        server = await device.gatt.connect();
-        service = await server.getPrimaryService(serviceUUID);
-
-        document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-        log("Connected to device: " + device.name);
-
-        // Start polling heater and pump status
-        setInterval(updateStatuses, 3000);
-
-      } catch (err) {
-        document.getElementById("status").innerText = `Connection failed: ${err.message}`;
-        log("Connection error: " + err);
-      }
-    }
-
-    async function runWorkflowX() {
-      abortFlag = false;
-      for (let i = 0; i < workflowX_temperature.length; i++) {
-        if (abortFlag) {
-          log("🚫 Workflow aborted");
-          return;
-        }
-        const targetTemp = workflowX_temperature[i] * 10;
-        await setTemperature(targetTemp);
-        await waitForTemp(targetTemp);
-        await hold(workflowX_holdTimeInMilliSeconds[i]);
-        await startPump(workflowX_pumpTimeInMilliSeconds[i]);
-      }
-      log("✅ Workflow X completed");
-    }
-
-    function abortWorkflow() {
-      abortFlag = true;
-    }
-
-    async function setTemperature(tempInTenthDegrees) {
-      const char = await service.getCharacteristic('10110003-5354-4f52-5a26-4249434b454c');
-      const buffer = new ArrayBuffer(2);
-      new DataView(buffer).setUint16(0, tempInTenthDegrees, true);
-      await char.writeValue(buffer);
-      log(`🌡️ Set temperature to ${tempInTenthDegrees / 10}°C`);
-    }
-
-    async function waitForTemp(targetTemp) {
-      const char = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
-      let temp = 0;
-      while (Math.abs(temp - targetTemp) > 10) {
-        const value = await char.readValue();
-        temp = new DataView(value.buffer).getUint16(0, true);
-        document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
-        log(`Current temperature: ${temp / 10}°C`);
-        await new Promise(r => setTimeout(r, 1500));
-      }
-      log("✅ Temperature reached");
-    }
-
-    async function hold(ms) {
-      log(`⏳ Holding for ${ms}ms`);
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async function startPump(duration) {
-      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-      await char.writeValue(new Uint8Array([0x01]));
-      document.getElementById("pumpStatus").innerText = "ON";
-      log("💨 Pump started");
-      await new Promise(resolve => setTimeout(resolve, duration));
-      await char.writeValue(new Uint8Array([0x00]));
-      document.getElementById("pumpStatus").innerText = "OFF";
-      log("🛑 Pump stopped");
-    }
-
-    async function updateStatuses() {
-      try {
-        const heatChar = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
-        const pumpChar = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-
-        const heaterValue = await heatChar.readValue();
-        const heaterStatus = heaterValue.getUint8(0) === 1 ? "ON" : "OFF";
-        document.getElementById("heaterStatus").innerText = heaterStatus;
-
-        // Pump status is inferred from UI, no direct read characteristic known
-
-      } catch (err) {
-        log("⚠️ Error updating statuses: " + err);
-      }
-    }
-  </script>
+  <script type="module" src="./main.js"></script>
 </body>
 </html>
