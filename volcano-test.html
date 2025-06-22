@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.22</title>
+  <title>Volcano Hybrid Test Control v0.24</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.22)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.24)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -29,6 +29,8 @@
     let server, service;
     let abortFlag = false;
     const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
+    const pumpOnUUID = '10110013-5354-4f52-5a26-4249434b454c';
+    const pumpOffUUID = '10110014-5354-4f52-5a26-4249434b454c';
 
     const workflowX_temperature = [175, 180, 185, 190, 195];
     const workflowX_holdTimeInMilliSeconds = [7000, 7000, 0, 0, 0];
@@ -56,7 +58,7 @@
     async function connect() {
       try {
         const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
+          filters: [{ namePrefix: 'Volcano' }],
           optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
         });
 
@@ -93,7 +95,7 @@
 
     async function runWorkflowX() {
       abortFlag = false;
-      log("========= START WORKFLOW v0.22 =========");
+      log("========= START WORKFLOW v0.24 =========");
 
       try {
         await stopPump();
@@ -114,7 +116,7 @@
           await sleep(300);
 
           await setTemperature(targetTemp);
-          await wait(2000); // Extra Zeit geben vor Heater-Start
+          await wait(2000);
           if (abortFlag) throw new Error("Aborted");
 
           await startHeater();
@@ -192,14 +194,14 @@
     }
 
     async function startPumpOnly() {
-      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      const char = await service.getCharacteristic(pumpOnUUID);
       await char.writeValue(new Uint8Array([0x01]));
       document.getElementById("pumpStatus").innerText = "ON";
       log("💨 Pump ON");
     }
 
     async function stopPump() {
-      const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      const char = await service.getCharacteristic(pumpOffUUID);
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump OFF");
