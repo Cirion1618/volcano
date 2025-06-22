@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.18</title>
+  <title>Volcano Hybrid Test Control v0.19</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.18)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.19)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -38,6 +38,10 @@
       const el = document.getElementById("log");
       el.innerText += msg + "\n";
       el.scrollTop = el.scrollHeight;
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function connect() {
@@ -87,6 +91,12 @@
       log("Pump Times: " + workflowX_pumpTimeInMilliSeconds.map(ms => ms / 1000 + "s").join(", "));
       log("=========================");
 
+      // Sicherheitsstop
+      await stopPump();
+      await sleep(200);
+      await stopHeater();
+      await sleep(200);
+
       for (let i = 0; i < workflowX_temperature.length; i++) {
         if (abortFlag) {
           log("🚫 Workflow aborted");
@@ -94,18 +104,29 @@
           await stopHeater();
           return;
         }
+
         const targetTemp = workflowX_temperature[i] * 10;
         await stopPump();
+        await sleep(200);
+
         await setTemperature(targetTemp);
+        await sleep(750); // wichtig: Zeit geben für Temp-Set
         await startHeater();
+        await sleep(500);
+
         await waitForTemp(targetTemp);
         if (abortFlag) break;
-        await hold(workflowX_holdTimeInMilliSeconds[i]);
+
+        await sleep(workflowX_holdTimeInMilliSeconds[i]);
         if (abortFlag) break;
+
+        log(`💨 Starting pump for ${workflowX_pumpTimeInMilliSeconds[i] / 1000}s...`);
         await startPumpOnly();
-        await new Promise(resolve => setTimeout(resolve, workflowX_pumpTimeInMilliSeconds[i]));
+        await sleep(workflowX_pumpTimeInMilliSeconds[i]);
         await stopPump();
+        await sleep(200);
       }
+
       await stopPump();
       await stopHeater();
       log("✅ Workflow X completed or aborted");
@@ -143,19 +164,15 @@
         const value = await char.readValue();
         temp = new DataView(value.buffer).getUint16(0, true);
         document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
-        log(`Current temperature: ${temp / 10}°C`);
-        await new Promise(r => setTimeout(r, 1500));
+        log(`🌡️ Current temperature: ${temp / 10}°C`);
+        await sleep(1500);
       }
       log("✅ Temperature reached");
     }
 
-    async function hold(ms) {
-      log(`⏳ Holding for ${ms}ms`);
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     async function startPumpOnly() {
       const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      log("✉️ Sending PUMP ON (0x01)...");
       await char.writeValue(new Uint8Array([0x01]));
       document.getElementById("pumpStatus").innerText = "ON";
       log("💨 Pump started");
@@ -163,6 +180,7 @@
 
     async function stopPump() {
       const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
+      log("✉️ Sending PUMP OFF (0x00)...");
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump stopped");
