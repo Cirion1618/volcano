@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.20</title>
+  <title>Volcano Hybrid Test Control v0.21</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.20)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.21)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -84,62 +84,56 @@
 
     async function runWorkflowX() {
       abortFlag = false;
-      log("========= START WORKFLOW v0.20 =========");
-      log("Temperatures: " + workflowX_temperature.join(", ") + " °C");
+      log("========= START WORKFLOW v0.21 =========");
 
-      // Sichere Initialisierung
       await stopPump();
       await sleep(300);
       await stopHeater();
       await sleep(300);
 
       for (let i = 0; i < workflowX_temperature.length; i++) {
-        if (abortFlag) {
-          log("🚫 Workflow aborted");
-          await stopPump();
-          await stopHeater();
-          return;
-        }
+        if (abortFlag) break;
 
         const targetTemp = workflowX_temperature[i] * 10;
         const holdTime = workflowX_holdTimeInMilliSeconds[i];
         const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
 
-        log(`🧭 STEP ${i + 1} — Target: ${targetTemp / 10}°C | Hold: ${holdTime}ms | Pump: ${pumpTime}ms`);
+        log(`🧭 STEP ${i + 1}: Target ${targetTemp / 10}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
 
         await stopPump();
         await sleep(300);
 
         await setTemperature(targetTemp);
         await sleep(750);
-
         await startHeater();
         await sleep(500);
 
         await waitForTemp(targetTemp);
         if (abortFlag) break;
 
+        log(`⏳ Holding for ${holdTime}ms`);
         await sleep(holdTime);
         if (abortFlag) break;
 
         if (pumpTime > 0) {
-          log("💨 Starting pump...");
+          log(`💨 Pumping for ${pumpTime}ms`);
           await startPumpOnly();
           await sleep(pumpTime);
           await stopPump();
         } else {
-          log("⚠️ No pump time set, skipping pump...");
+          log("Skipping pump phase");
         }
 
-        await readPumpState(); // Pumpenstatus prüfen
+        await sleep(500);
       }
 
       await stopPump();
       await stopHeater();
-      log("✅ Workflow completed (v0.20)");
+      log("✅ Workflow finished or aborted.");
     }
 
     function abortWorkflow() {
+      log("❌ Abort requested.");
       abortFlag = true;
     }
 
@@ -154,13 +148,13 @@
     async function startHeater() {
       const char = await service.getCharacteristic('1011000f-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x01]));
-      log("🔥 Heater ON command sent");
+      log("🔥 Heater ON");
     }
 
     async function stopHeater() {
       const char = await service.getCharacteristic('10110010-5354-4f52-5a26-4249434b454c');
       await char.writeValue(new Uint8Array([0x01]));
-      log("🛑 Heater OFF command sent");
+      log("🛑 Heater OFF");
     }
 
     async function waitForTemp(targetTemp) {
@@ -171,35 +165,24 @@
         const value = await char.readValue();
         temp = new DataView(value.buffer).getUint16(0, true);
         document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
-        log(`🌡️ Current temperature: ${temp / 10}°C`);
+        log(`Current temp: ${temp / 10}°C`);
         await sleep(1500);
       }
-      log("✅ Temperature reached");
+      log("✅ Target temperature reached");
     }
 
     async function startPumpOnly() {
       const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-      log("✉️ Sending PUMP ON (0x01)...");
       await char.writeValue(new Uint8Array([0x01]));
       document.getElementById("pumpStatus").innerText = "ON";
-      log("💨 Pump started");
+      log("💨 Pump ON");
     }
 
     async function stopPump() {
       const char = await service.getCharacteristic('10110013-5354-4f52-5a26-4249434b454c');
-      log("✉️ Sending PUMP OFF (0x00)...");
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
-      log("🛑 Pump stopped");
-    }
-
-    async function readPumpState() {
-      try {
-        // Wenn verfügbar: UUID hier einfügen
-        log("ℹ️ readPumpState: (Pumpenzustand unbekannt – Funktion vorbereitet, UUID fehlt).");
-      } catch (e) {
-        log("⚠️ Could not read pump status: " + e);
-      }
+      log("🛑 Pump OFF");
     }
 
     async function updateStatuses() {
