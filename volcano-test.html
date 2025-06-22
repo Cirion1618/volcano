@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.19</title>
+  <title>Volcano Hybrid Test Control v0.20</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.19)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.20)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -84,18 +84,14 @@
 
     async function runWorkflowX() {
       abortFlag = false;
-      log("=========================");
-      log("🚀 Starting Workflow X");
+      log("========= START WORKFLOW v0.20 =========");
       log("Temperatures: " + workflowX_temperature.join(", ") + " °C");
-      log("Hold Times: " + workflowX_holdTimeInMilliSeconds.map(ms => ms / 1000 + "s").join(", "));
-      log("Pump Times: " + workflowX_pumpTimeInMilliSeconds.map(ms => ms / 1000 + "s").join(", "));
-      log("=========================");
 
-      // Sicherheitsstop
+      // Sichere Initialisierung
       await stopPump();
-      await sleep(200);
+      await sleep(300);
       await stopHeater();
-      await sleep(200);
+      await sleep(300);
 
       for (let i = 0; i < workflowX_temperature.length; i++) {
         if (abortFlag) {
@@ -106,30 +102,41 @@
         }
 
         const targetTemp = workflowX_temperature[i] * 10;
+        const holdTime = workflowX_holdTimeInMilliSeconds[i];
+        const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
+
+        log(`🧭 STEP ${i + 1} — Target: ${targetTemp / 10}°C | Hold: ${holdTime}ms | Pump: ${pumpTime}ms`);
+
         await stopPump();
-        await sleep(200);
+        await sleep(300);
 
         await setTemperature(targetTemp);
-        await sleep(750); // wichtig: Zeit geben für Temp-Set
+        await sleep(750);
+
         await startHeater();
         await sleep(500);
 
         await waitForTemp(targetTemp);
         if (abortFlag) break;
 
-        await sleep(workflowX_holdTimeInMilliSeconds[i]);
+        await sleep(holdTime);
         if (abortFlag) break;
 
-        log(`💨 Starting pump for ${workflowX_pumpTimeInMilliSeconds[i] / 1000}s...`);
-        await startPumpOnly();
-        await sleep(workflowX_pumpTimeInMilliSeconds[i]);
-        await stopPump();
-        await sleep(200);
+        if (pumpTime > 0) {
+          log("💨 Starting pump...");
+          await startPumpOnly();
+          await sleep(pumpTime);
+          await stopPump();
+        } else {
+          log("⚠️ No pump time set, skipping pump...");
+        }
+
+        await readPumpState(); // Pumpenstatus prüfen
       }
 
       await stopPump();
       await stopHeater();
-      log("✅ Workflow X completed or aborted");
+      log("✅ Workflow completed (v0.20)");
     }
 
     function abortWorkflow() {
@@ -184,6 +191,15 @@
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
       log("🛑 Pump stopped");
+    }
+
+    async function readPumpState() {
+      try {
+        // Wenn verfügbar: UUID hier einfügen
+        log("ℹ️ readPumpState: (Pumpenzustand unbekannt – Funktion vorbereitet, UUID fehlt).");
+      } catch (e) {
+        log("⚠️ Could not read pump status: " + e);
+      }
     }
 
     async function updateStatuses() {
