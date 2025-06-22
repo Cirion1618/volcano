@@ -1,73 +1,80 @@
-// main.js
-
-import {
-  setTemperature,
-  startPumpOnly,
-  stopPump,
-  stopHeater,
-  startHeater,
-  waitForTemp,
-  wait,
-  log,
-  abortFlag,
-  updateProgressBar,
-  volcanoConnect
-} from './core.js';
-
-window.connect = volcanoConnect;
-window.abortWorkflow = () => abortFlag.value = true;
-
-window.runWorkflowX = async function runWorkflowX() {
-  const temperatures = [182, 192, 201, 220];
-  const holdTimes = [10000, 7000, 5000, 3000];
-  const pumpTimes = [10000, 12000, 10000, 10000];
-
-  log("========= START WORKFLOW X =========");
-  try {
-    await stopPump();
-    await wait(300);
-    await stopHeater();
-    await wait(300);
-
-    for (let i = 0; i < temperatures.length; i++) {
-      updateProgressBar((i / temperatures.length) * 100);
-      if (abortFlag.value) throw new Error("Aborted");
-      const targetTemp = temperatures[i] * 10;
-      const holdTime = holdTimes[i];
-      const pumpTime = pumpTimes[i];
-      log(`🧭 STEP ${i + 1}: Target ${temperatures[i]}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
-      await stopPump();
-      await wait(300);
-      await setTemperature(targetTemp);
-      await wait(2000);
-      if (abortFlag.value) throw new Error("Aborted");
-      await startHeater();
-      await wait(500);
-      await waitForTemp(targetTemp);
-      if (abortFlag.value) throw new Error("Aborted");
-      log(`⏳ Holding for ${holdTime}ms`);
-      await wait(holdTime);
-      if (pumpTime > 0) {
-        log(`💨 Pumping for ${pumpTime}ms`);
-        await startPumpOnly();
-        await wait(pumpTime);
-        await stopPump();
-      } else {
-        log("Skipping pump phase");
-      }
-      await wait(500);
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volcano Hybrid Control</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 2em;
     }
-    await stopPump();
-    await stopHeater();
-    updateProgressBar(100);
-    log("✅ Workflow X completed.");
-  } catch (e) {
-    if (e.message === "Aborted") {
-      log("❌ Workflow X aborted.");
-      await stopPump();
-      await stopHeater();
-    } else {
-      log("⚠️ Error during Workflow X: " + e);
+    h1 {
+      text-align: center;
+      margin-bottom: 1em;
     }
-  }
-};
+    button {
+      background-color: #333;
+      color: #eee;
+      border: 1px solid #555;
+      padding: 0.8em 1.5em;
+      margin: 0.5em;
+      border-radius: 0.5em;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    button:hover {
+      background-color: #444;
+    }
+    #progressContainer {
+      width: 100%;
+      background-color: #333;
+      border-radius: 5px;
+      margin-top: 1em;
+      height: 25px;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background-color: limegreen;
+      border-radius: 5px;
+      transition: width 0.4s ease;
+    }
+    #log {
+      background-color: #222;
+      padding: 1em;
+      margin-top: 1em;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+    #status {
+      margin-bottom: 1em;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Volcano Hybrid Web Controller</h1>
+  <div id="status">Status: Not connected</div>
+
+  <div style="text-align: center;">
+    <button onclick="connect()">🔌 Verbinden</button>
+    <button onclick="runWorkflowX()">▶️ Start Workflow X</button>
+    <button onclick="abortWorkflow()">⛔ Abbrechen</button>
+  </div>
+
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
+
+  <div id="log">[System bereit]</div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
