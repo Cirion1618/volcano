@@ -11,6 +11,16 @@ import {
   updateProgressBar
 } from './core.js';
 
+
+import { volcanoConnect } from './core.js';
+
+function connect() {
+  volcanoConnect();
+}
+
+window.connect = connect;
+
+
 export async function runManualWorkflow() {
   const temps = document.getElementById("tempInput").value.split(',').map(n => parseInt(n.trim()));
   const holds = document.getElementById("holdInput").value.split(',').map(n => parseInt(n.trim()));
