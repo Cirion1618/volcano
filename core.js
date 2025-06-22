@@ -1,6 +1,5 @@
 // core.js
 
-// Dummy placeholder BLE characteristics - must be overwritten after connection
 export let characteristicVolcanoPumpOn;
 export let characteristicIsPumpOffV;
 export let characteristicWriteTempV;
@@ -77,10 +76,13 @@ export function updateProgressBar(percent) {
 export async function volcanoConnect() {
   abortFlag.value = false;
   const filters = [{ namePrefix: "VOLCANO" }];
-  const options = { filters, optionalServices: [
-    "00001523-1212-efde-1523-785feabcd123",
-    "00001524-1212-efde-1523-785feabcd123"
-  ]};
+  const options = {
+    filters,
+    optionalServices: [
+      "00001523-1212-efde-1523-785feabcd123",
+      "00001524-1212-efde-1523-785feabcd123"
+    ]
+  };
 
   try {
     const device = await navigator.bluetooth.requestDevice(options);
