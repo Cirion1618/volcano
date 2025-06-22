@@ -1,0 +1,9 @@
+async function connect() { /* Gerät verbinden & speichern */ }
+async function setTemperature(target) { /* Zieltemperatur setzen */ }
+async function startPumpOnly() { /* Pumpe starten */ }
+async function stopPump() { /* Pumpe stoppen */ }
+async function startHeater() { /* Heizung starten */ }
+async function stopHeater() { /* Heizung stoppen */ }
+async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function waitForTemp(target) { /* Temp überwachen */ }
+function log(text) { document.getElementById("log").innerText += text + \"\\n\"; }
