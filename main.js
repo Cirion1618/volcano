@@ -20,10 +20,11 @@ window.connect = async function connect() {
     let server;
     let service;
 
+    // Direkte Anfrage mit funktionierender Service-UUID
     device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [
-        "10100000-5354-4f52-5a26-4249434b454c" // Das ist die funktionierende Root-Service UUID
+        "10100000-5354-4f52-5a26-4249434b454c" // Hauptservice deines Volcano
       ]
     });
 
@@ -31,20 +32,17 @@ window.connect = async function connect() {
 
     document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
     server = await device.gatt.connect();
-
-    // Funktionierende Service UUID aus deinem Originalcode
     service = await server.getPrimaryService("10100000-5354-4f52-5a26-4249434b454c");
 
     document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
     log("✅ Connected to device: " + device.name);
 
-    // Hier könntest du weitere Schritte ergänzen (z. B. `await readFirmwareVersion()`)
+    // Optional: Weitere Initialisierungen oder Statusabfragen
   } catch (err) {
     document.getElementById("status").innerText = `Connection failed: ${err.message}`;
     log("❌ Connection error: " + err);
   }
 };
-
 
 window.abortWorkflow = () => abortFlag.value = true;
 
