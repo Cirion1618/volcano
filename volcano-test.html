@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.21</title>
+  <title>Volcano Hybrid Test Control v0.22</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.21)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.22)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -42,6 +42,15 @@
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function wait(ms) {
+      const interval = 100;
+      const steps = Math.floor(ms / interval);
+      for (let i = 0; i < steps; i++) {
+        if (abortFlag) throw new Error("Aborted");
+        await new Promise(res => setTimeout(res, interval));
+      }
     }
 
     async function connect() {
@@ -84,52 +93,63 @@
 
     async function runWorkflowX() {
       abortFlag = false;
-      log("========= START WORKFLOW v0.21 =========");
+      log("========= START WORKFLOW v0.22 =========");
 
-      await stopPump();
-      await sleep(300);
-      await stopHeater();
-      await sleep(300);
-
-      for (let i = 0; i < workflowX_temperature.length; i++) {
-        if (abortFlag) break;
-
-        const targetTemp = workflowX_temperature[i] * 10;
-        const holdTime = workflowX_holdTimeInMilliSeconds[i];
-        const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
-
-        log(`🧭 STEP ${i + 1}: Target ${targetTemp / 10}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
-
+      try {
         await stopPump();
         await sleep(300);
+        await stopHeater();
+        await sleep(300);
 
-        await setTemperature(targetTemp);
-        await sleep(750);
-        await startHeater();
-        await sleep(500);
+        for (let i = 0; i < workflowX_temperature.length; i++) {
+          if (abortFlag) throw new Error("Aborted");
 
-        await waitForTemp(targetTemp);
-        if (abortFlag) break;
+          const targetTemp = workflowX_temperature[i] * 10;
+          const holdTime = workflowX_holdTimeInMilliSeconds[i];
+          const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
 
-        log(`⏳ Holding for ${holdTime}ms`);
-        await sleep(holdTime);
-        if (abortFlag) break;
+          log(`🧭 STEP ${i + 1}: Target ${targetTemp / 10}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
 
-        if (pumpTime > 0) {
-          log(`💨 Pumping for ${pumpTime}ms`);
-          await startPumpOnly();
-          await sleep(pumpTime);
           await stopPump();
-        } else {
-          log("Skipping pump phase");
+          await sleep(300);
+
+          await setTemperature(targetTemp);
+          await wait(2000); // Extra Zeit geben vor Heater-Start
+          if (abortFlag) throw new Error("Aborted");
+
+          await startHeater();
+          await wait(500);
+
+          await waitForTemp(targetTemp);
+          if (abortFlag) throw new Error("Aborted");
+
+          log(`⏳ Holding for ${holdTime}ms`);
+          await wait(holdTime);
+
+          if (pumpTime > 0) {
+            log(`💨 Pumping for ${pumpTime}ms`);
+            await startPumpOnly();
+            await wait(pumpTime);
+            await stopPump();
+          } else {
+            log("Skipping pump phase");
+          }
+
+          await wait(500);
         }
 
-        await sleep(500);
+        await stopPump();
+        await stopHeater();
+        log("✅ Workflow completed.");
+      } catch (e) {
+        if (e.message === "Aborted") {
+          log("❌ Workflow aborted.");
+          await stopPump();
+          await stopHeater();
+        } else {
+          log("⚠️ Error during workflow: " + e);
+        }
       }
-
-      await stopPump();
-      await stopHeater();
-      log("✅ Workflow finished or aborted.");
     }
 
     function abortWorkflow() {
@@ -161,12 +181,12 @@
       const char = await service.getCharacteristic('10110001-5354-4f52-5a26-4249434b454c');
       let temp = 0;
       while (Math.abs(temp - targetTemp) > 10) {
-        if (abortFlag) return;
+        if (abortFlag) throw new Error("Aborted");
         const value = await char.readValue();
         temp = new DataView(value.buffer).getUint16(0, true);
         document.getElementById("currentTemp").innerText = (temp / 10).toFixed(1);
         log(`Current temp: ${temp / 10}°C`);
-        await sleep(1500);
+        await wait(1500);
       }
       log("✅ Target temperature reached");
     }
