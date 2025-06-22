@@ -14,35 +14,10 @@ import {
   volcanoConnect
 } from './core.js';
 
-window.connect = async function connect() {
-  try {
-    let device;
-    let server;
-    let service;
-
-    // Direkte Anfrage mit funktionierender Service-UUID
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [
-        "10100000-5354-4f52-5a26-4249434b454c" // Hauptservice deines Volcano
-      ]
-    });
-
-    localStorage.setItem('volcanoDeviceId', device.id);
-
-    document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-    server = await device.gatt.connect();
-    service = await server.getPrimaryService("10100000-5354-4f52-5a26-4249434b454c");
-
-    document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-    log("✅ Connected to device: " + device.name);
-
-    // Optional: Weitere Initialisierungen oder Statusabfragen
-  } catch (err) {
-    document.getElementById("status").innerText = `Connection failed: ${err.message}`;
-    log("❌ Connection error: " + err);
-  }
+window.connect = async function () {
+  await volcanoConnect();
 };
+
 
 window.abortWorkflow = () => abortFlag.value = true;
 
