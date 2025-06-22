@@ -54,9 +54,9 @@ window.connect = async function connect() {
 window.abortWorkflow = () => abortFlag.value = true;
 
 window.runWorkflowX = async function runWorkflowX() {
-  const temperatures = [182, 192, 201, 220];
-  const holdTimes = [10000, 7000, 5000, 3000];
-  const pumpTimes = [10000, 12000, 10000, 10000];
+  const temperatures = [180, 188, 195, 205];
+  const holdTimes = [7000, 5000, 5000, 7000];
+  const pumpTimes = [10000, 10000, 10000, 8000];
 
   log("========= START WORKFLOW X =========");
   try {
