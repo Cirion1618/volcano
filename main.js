@@ -20,12 +20,10 @@ window.connect = async function connect() {
     let server;
     let service;
 
-    // Statt getDevices() direkte Anfrage
     device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [
-        "00001523-1212-efde-1523-785feabcd123",
-        "10100000-5354-4f52-5a26-4249434b454c"
+        "10100000-5354-4f52-5a26-4249434b454c" // Das ist die funktionierende Root-Service UUID
       ]
     });
 
@@ -33,17 +31,20 @@ window.connect = async function connect() {
 
     document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
     server = await device.gatt.connect();
-    service = await server.getPrimaryService("00001523-1212-efde-1523-785feabcd123");
+
+    // Funktionierende Service UUID aus deinem Originalcode
+    service = await server.getPrimaryService("10100000-5354-4f52-5a26-4249434b454c");
 
     document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
     log("✅ Connected to device: " + device.name);
 
-    // Optional: Start status updates or additional reads here
+    // Hier könntest du weitere Schritte ergänzen (z. B. `await readFirmwareVersion()`)
   } catch (err) {
     document.getElementById("status").innerText = `Connection failed: ${err.message}`;
     log("❌ Connection error: " + err);
   }
 };
+
 
 window.abortWorkflow = () => abortFlag.value = true;
 
