@@ -1,105 +1,95 @@
 // core.js
 
-export let characteristicVolcanoPumpOn;
-export let characteristicIsPumpOffV;
-export let characteristicWriteTempV;
-export let characteristicHeaterOnV;
-export let characteristicHeaterOffV;
-export let characteristicCurrTempV;
+export let abortFlag = { value: false };
 
-export const abortFlag = { value: false };
+let characteristicWriteTempV;
+let characteristicHeaterOnV;
+let characteristicHeaterOffV;
+let characteristicVolcanoPumpOn;
+let characteristicIsPumpOffV;
+let characteristicCurrTempV;
 
-export function log(msg) {
-  const logDiv = document.getElementById("log");
-  const time = new Date().toLocaleTimeString();
-  logDiv.innerHTML += `[${time}] ${msg}<br>`;
-  logDiv.scrollTop = logDiv.scrollHeight;
+export async function volcanoConnect() {
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ["10100000-5354-4f52-5a26-4249434b454c"]
+    });
+
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService("10100000-5354-4f52-5a26-4249434b454c");
+
+    characteristicWriteTempV = await service.getCharacteristic("10110003-5354-4f52-5a26-4249434b454c");
+    characteristicHeaterOnV = await service.getCharacteristic("10110010-5354-4f52-5a26-4249434b454c");
+    characteristicHeaterOffV = await service.getCharacteristic("10110011-5354-4f52-5a26-4249434b454c");
+    characteristicVolcanoPumpOn = await service.getCharacteristic("10110013-5354-4f52-5a26-4249434b454c");
+    characteristicIsPumpOffV = await service.getCharacteristic("10110014-5354-4f52-5a26-4249434b454c");
+    characteristicCurrTempV = await service.getCharacteristic("10110001-5354-4f52-5a26-4249434b454c");
+
+    document.getElementById("status").innerText = `✅ Connected to ${device.name}`;
+    log(`Connected to ${device.name}`);
+  } catch (err) {
+    document.getElementById("status").innerText = `❌ Connection failed: ${err.message}`;
+    log("❌ Connection error: " + err);
+  }
 }
 
-export function wait(ms) {
+export function log(message) {
+  const logElem = document.getElementById("log");
+  if (logElem) {
+    logElem.innerText += message + "\n";
+    logElem.scrollTop = logElem.scrollHeight;
+  } else {
+    console.log(message);
+  }
+}
+
+export async function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function setTemperature(tempValue) {
+export async function setTemperature(temp) {
   const buffer = new Uint8Array(2);
-  buffer[0] = tempValue & 0xff;
-  buffer[1] = (tempValue >> 8) & 0xff;
+  buffer[0] = temp & 0xff;
+  buffer[1] = (temp >> 8) & 0xff;
   await characteristicWriteTempV.writeValue(buffer);
-  log(`🎯 Set target temperature to ${tempValue / 10}°C`);
 }
 
 export async function startHeater() {
-  const buffer = new Uint8Array([0]);
-  await characteristicHeaterOnV.writeValue(buffer);
-  log("🔥 Heater started");
+  await characteristicHeaterOnV.writeValue(new Uint8Array([0]));
 }
 
 export async function stopHeater() {
-  const buffer = new Uint8Array([0]);
-  await characteristicHeaterOffV.writeValue(buffer);
-  log("🧊 Heater stopped");
+  await characteristicHeaterOffV.writeValue(new Uint8Array([0]));
 }
 
 export async function startPumpOnly() {
-  const buffer = new Uint8Array([0]);
-  await characteristicVolcanoPumpOn.writeValue(buffer);
-  log("💨 Pump started");
+  await characteristicVolcanoPumpOn.writeValue(new Uint8Array([0]));
 }
 
 export async function stopPump() {
-  const buffer = new Uint8Array([0]);
-  await characteristicIsPumpOffV.writeValue(buffer);
-  log("🛑 Pump stopped");
+  await characteristicIsPumpOffV.writeValue(new Uint8Array([0]));
 }
 
-export async function waitForTemp(targetTemp) {
-  const tolerance = 5;
-  let stable = false;
-  for (let i = 0; i < 60 && !stable; i++) {
+export async function waitForTemp(target) {
+  const maxWait = 60 * 1000; // 60s timeout
+  const interval = 1000;
+  const startTime = Date.now();
+
+  while (true) {
     const value = await characteristicCurrTempV.readValue();
-    const currentTemp = value.getUint16(0, true);
-    const diff = Math.abs(currentTemp - targetTemp);
-    if (diff <= tolerance) {
-      stable = true;
-    } else {
-      await wait(1500);
-    }
+    const current = value.getUint16(0, true);
+    log(`🌡 Current temp: ${current / 10}°C`);
+
+    if (current >= target) break;
+    if (Date.now() - startTime > maxWait) throw new Error("Timeout waiting for temperature");
+    if (abortFlag.value) throw new Error("Aborted");
+
+    await wait(interval);
   }
-  log("🌡️ Target temperature reached");
 }
 
 export function updateProgressBar(percent) {
-  const bar = document.getElementById("progressBar");
-  bar.style.width = `${percent}%`;
-}
-
-export async function volcanoConnect() {
-  abortFlag.value = false;
-  const filters = [{ namePrefix: "VOLCANO" }];
-  const options = {
-    filters,
-    optionalServices: [
-      "00001523-1212-efde-1523-785feabcd123",
-      "00001524-1212-efde-1523-785feabcd123"
-    ]
-  };
-
-  try {
-    const device = await navigator.bluetooth.requestDevice(options);
-    const server = await device.gatt.connect();
-
-    const service = await server.getPrimaryService("00001523-1212-efde-1523-785feabcd123");
-
-    characteristicVolcanoPumpOn = await service.getCharacteristic("10110013-5354-4f52-5a26-4249434b454c");
-    characteristicIsPumpOffV   = await service.getCharacteristic("10110014-5354-4f52-5a26-4249434b454c");
-    characteristicWriteTempV   = await service.getCharacteristic("10110003-5354-4f52-5a26-4249434b454c");
-    characteristicHeaterOnV    = await service.getCharacteristic("10110010-5354-4f52-5a26-4249434b454c");
-    characteristicHeaterOffV   = await service.getCharacteristic("10110011-5354-4f52-5a26-4249434b454c");
-    characteristicCurrTempV    = await service.getCharacteristic("10110001-5354-4f52-5a26-4249434b454c");
-
-    document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-    log(`✅ Connected to ${device.name}`);
-  } catch (err) {
-    log("❌ Connection failed: " + err);
-  }
+  const bar = document.getElementById("progress");
+  if (bar) bar.style.width = `${percent}%`;
 }
