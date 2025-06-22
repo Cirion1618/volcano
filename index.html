@@ -1,62 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.27</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volcano Hybrid Control</title>
   <style>
-    #log {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #f0f0f0;
-      padding: 1em;
-      font-family: monospace;
-    }
-    #workflowInput {
-      margin-top: 1em;
-      background: #e0e0e0;
-      padding: 1em;
+    body {
       font-family: sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 2em;
     }
-    .bar-container {
+    h1 {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+    button {
+      background-color: #333;
+      color: #eee;
+      border: 1px solid #555;
+      padding: 0.8em 1.5em;
+      margin: 0.5em;
+      border-radius: 0.5em;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    button:hover {
+      background-color: #444;
+    }
+    #progressContainer {
       width: 100%;
-      background-color: #ccc;
+      background-color: #333;
+      border-radius: 5px;
       margin-top: 1em;
+      height: 25px;
     }
-    .bar {
-      height: 20px;
+    #progressBar {
+      height: 100%;
       width: 0%;
-      background-color: #76c7c0;
-      transition: width 0.5s;
+      background-color: limegreen;
+      border-radius: 5px;
+      transition: width 0.4s ease;
+    }
+    #log {
+      background-color: #222;
+      padding: 1em;
+      margin-top: 1em;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+    #status {
+      margin-bottom: 1em;
+      text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.27)</h2>
+  <h1>Volcano Hybrid Web Controller</h1>
+  <div id="status">Status: Not connected</div>
 
-  <button onclick="connect()">🔗 Connect to Volcano</button>
-  <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
-  <button onclick="runManualWorkflow()">▶️ Run Manual Workflow</button>
-  <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
-
-  <p id="status">Status: Not connected</p>
-  <p>Current Temperature: <span id="currentTemp">-</span>°C</p>
-  <p>Heater Status: <span id="heaterStatus">Unknown</span></p>
-  <p>Pump Status: <span id="pumpStatus">Unknown</span></p>
-  <p>Firmware Version: <span id="firmwareVersion">-</span></p>
-
-  <div id="workflowInput">
-    <label>Manual Workflow:<br>
-      Temperatures (comma): <input id="tempInput" size="50"><br>
-      Hold Times ms (comma): <input id="holdInput" size="50"><br>
-      Pump Times ms (comma): <input id="pumpInput" size="50"><br>
-    </label>
+  <div style="text-align: center;">
+    <button onclick="connect()">🔌 Verbinden</button>
+    <button onclick="runWorkflowX()">▶️ Start Workflow X</button>
+    <button onclick="abortWorkflow()">⛔ Abbrechen</button>
   </div>
 
-  <div class="bar-container">
-    <div id="progressBar" class="bar"></div>
+  <div id="progressContainer">
+    <div id="progressBar"></div>
   </div>
 
-  <div id="log"></div>
+  <div id="log">[System bereit]</div>
 
   <script type="module" src="./main.js"></script>
 </body>
