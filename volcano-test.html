@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.24</title>
+  <title>Volcano Hybrid Test Control v0.25</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.24)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.25)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -26,7 +26,7 @@
   <div id="log"></div>
 
   <script>
-    let server, service;
+    let server, service, device;
     let abortFlag = false;
     const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
     const pumpOnUUID = '10110013-5354-4f52-5a26-4249434b454c';
@@ -57,13 +57,21 @@
 
     async function connect() {
       try {
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'Volcano' }],
-          optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
-        });
+        const storedId = localStorage.getItem('volcanoDeviceId');
+        if (storedId) {
+          const devices = await navigator.bluetooth.getDevices();
+          device = devices.find(d => d.id === storedId);
+        }
+
+        if (!device) {
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
+          });
+          localStorage.setItem('volcanoDeviceId', device.id);
+        }
 
         document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-
         server = await device.gatt.connect();
         service = await server.getPrimaryService(serviceUUID);
 
@@ -72,7 +80,6 @@
 
         await readFirmwareVersion();
         setInterval(updateStatuses, 3000);
-
       } catch (err) {
         document.getElementById("status").innerText = `Connection failed: ${err.message}`;
         log("Connection error: " + err);
@@ -95,7 +102,7 @@
 
     async function runWorkflowX() {
       abortFlag = false;
-      log("========= START WORKFLOW v0.24 =========");
+      log("========= START WORKFLOW v0.25 =========");
 
       try {
         await stopPump();
