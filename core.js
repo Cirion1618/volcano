@@ -22,8 +22,8 @@ export async function volcanoConnect() {
     //characteristicWriteTempV = await service.getCharacteristic("10110003-5354-4f52-5a26-4249434b454c");
     //characteristicHeaterOnV = await service.getCharacteristic("10110010-5354-4f52-5a26-4249434b454c");
     //characteristicHeaterOffV = await service.getCharacteristic("10110011-5354-4f52-5a26-4249434b454c");
-    characteristicVolcanoPumpOn = await service.getCharacteristic("10110013-5354-4f52-5a26-4249434b454c");
-    characteristicIsPumpOffV = await service.getCharacteristic("10110014-5354-4f52-5a26-4249434b454c");
+    //characteristicVolcanoPumpOn = await service.getCharacteristic("10110013-5354-4f52-5a26-4249434b454c");
+    //characteristicIsPumpOffV = await service.getCharacteristic("10110014-5354-4f52-5a26-4249434b454c");
     //characteristicCurrTempV = await service.getCharacteristic("10110001-5354-4f52-5a26-4249434b454c");
 
     document.getElementById("status").innerText = `✅ Connected to ${device.name}`;
