@@ -60,11 +60,22 @@
     async function connect() {
       try {
         const storedId = localStorage.getItem('volcanoDeviceId');
+        let device;
+    
+        // Falls eine vorherige Verbindung existiert, trennen
         if (storedId) {
-          const devices = await navigator.bluetooth.getDevices();
-          device = devices.find(d => d.id === storedId);
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
+          });
+    
+          if (device.gatt.connected) {
+            await device.gatt.disconnect();
+            console.log("Disconnected from previous device.");
+          }
         }
-
+    
+        // Falls kein gespeichertes Gerät vorhanden ist, neues Gerät auswählen
         if (!device) {
           device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -72,21 +83,23 @@
           });
           localStorage.setItem('volcanoDeviceId', device.id);
         }
-
+    
         document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-        server = await device.gatt.connect();
-        service = await server.getPrimaryService(serviceUUID);
-
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(serviceUUID);
+    
         document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-        log("Connected to device: " + device.name);
-
+        console.log("Connected to device:", device.name);
+    
         await readFirmwareVersion();
         setInterval(updateStatuses, 3000);
       } catch (err) {
         document.getElementById("status").innerText = `Connection failed: ${err.message}`;
-        log("Connection error: " + err);
-      }
-    }
+        console.error("Connection error:", err);
+  }
+}
+
+    
 
     async function readFirmwareVersion() {
       try {
