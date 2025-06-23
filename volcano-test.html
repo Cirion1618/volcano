@@ -4,7 +4,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v1.01</title>
+  <title>Volcano Hybrid Test Control v1.02</title>
   <style>
     #log {
       max-height: 200px;
@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v1.01)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v1.02)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -58,31 +58,29 @@
     }
 
     async function connect() {
-      try {
-        const storedId = localStorage.getItem('volcanoDeviceId');
-        let device;
     
-        // Falls eine vorherige Verbindung existiert, trennen
-        if (storedId) {
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
-          });
+        device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
+        });
+        localStorage.setItem('volcanoDeviceId', device.id);
+        
+
+        document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
+        server = await device.gatt.connect();
+        service = await server.getPrimaryService(serviceUUID);
+
+        document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
+        log("Connected to device: " + device.name);
+
+        await readFirmwareVersion();
+        setInterval(updateStatuses, 3000);
+      } catch (err) {
+        document.getElementById("status").innerText = `Connection failed: ${err.message}`;
+        log("Connection error: " + err);
+      }
+    }
     
-          if (device.gatt.connected) {
-            await device.gatt.disconnect();
-            console.log("Disconnected from previous device.");
-          }
-        }
-    
-        // Falls kein gespeichertes Gerät vorhanden ist, neues Gerät auswählen
-        if (!device) {
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
-          });
-          localStorage.setItem('volcanoDeviceId', device.id);
-        }
     
         document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
         const server = await device.gatt.connect();
