@@ -57,36 +57,28 @@
       }
     }
 
-   async function connect() {
-      try {
-        const storedId = localStorage.getItem('volcanoDeviceId');
-        <!-- if (storedId) {
-          const devices = await navigator.bluetooth.getDevices();
-          device = devices.find(d => d.id === storedId);
-        } -->
+  async function connect() {
+  try {
+    // Prompt user to select a Bluetooth device
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
+    });
 
-        if (!device) {
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
-          });
-          localStorage.setItem('volcanoDeviceId', device.id);
-        }
+    document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
+    server = await device.gatt.connect();
+    service = await server.getPrimaryService(serviceUUID);
 
-        document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-        server = await device.gatt.connect();
-        service = await server.getPrimaryService(serviceUUID);
+    document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
+    log("Connected to device: " + device.name);
 
-        document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-        log("Connected to device: " + device.name);
-
-        await readFirmwareVersion();
-        setInterval(updateStatuses, 3000);
-      } catch (err) {
-        document.getElementById("status").innerText = `Connection failed: ${err.message}`;
-        log("Connection error: " + err);
-      }
-    }
+    await readFirmwareVersion();
+    setInterval(updateStatuses, 3000);
+  } catch (err) {
+    document.getElementById("status").innerText = `Connection failed: ${err.message}`;
+    log("Connection error: " + err);
+  }
+}
     
     
         document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
