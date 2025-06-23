@@ -19,7 +19,7 @@ export async function volcanoConnect() {
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService("10100000-5354-4f52-5a26-4249434b454c");
 
-    characteristicWriteTempV = await service.getCharacteristic("10110003-5354-4f52-5a26-4249434b454c");
+    //characteristicWriteTempV = await service.getCharacteristic("10110003-5354-4f52-5a26-4249434b454c");
     characteristicHeaterOnV = await service.getCharacteristic("10110010-5354-4f52-5a26-4249434b454c");
     characteristicHeaterOffV = await service.getCharacteristic("10110011-5354-4f52-5a26-4249434b454c");
     characteristicVolcanoPumpOn = await service.getCharacteristic("10110013-5354-4f52-5a26-4249434b454c");
