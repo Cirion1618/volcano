@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- !!!!!!!!!! ES Funktioniert! Dieser Code Funktioniert genau so wie ich es mir vorgestellt habe für die erste Version. 22.06.2025 -->
+!!!!!!!!!! ES Funktioniert! Dieser Code Funktioniert genau so wie ich es mir vorgestellt habe für die erste Version. 22.06.2025
 
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v1.07</title>
+  <title>Volcano Hybrid Test Control v0.25</title>
   <style>
     #log {
       max-height: 200px;
@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v1.07)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.25)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -35,7 +35,7 @@
     const pumpOffUUID = '10110014-5354-4f52-5a26-4249434b454c';
 
     const workflowX_temperature = [175, 180, 185, 190, 195];
-    const workflowX_holdTimeInMilliSeconds = [10000, 5000, 0, 5000, 5000];
+    const workflowX_holdTimeInMilliSeconds = [7000, 7000, 0, 0, 0];
     const workflowX_pumpTimeInMilliSeconds = [7000, 7000, 7000, 7000, 10000];
 
     function log(msg) {
@@ -57,7 +57,7 @@
       }
     }
 
-  async function connect() {
+    async function connect() {
       try {
         const storedId = localStorage.getItem('volcanoDeviceId');
         if (storedId) {
@@ -87,24 +87,6 @@
         log("Connection error: " + err);
       }
     }
-    
-    
-        document.getElementById("status").innerText = `Status: Connecting to ${device.name}...`;
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(serviceUUID);
-    
-        document.getElementById("status").innerText = `Status: Connected to ${device.name}`;
-        console.log("Connected to device:", device.name);
-    
-        await readFirmwareVersion();
-        setInterval(updateStatuses, 3000);
-      } catch (err) {
-        document.getElementById("status").innerText = `Connection failed: ${err.message}`;
-        console.error("Connection error:", err);
-  }
-}
-
-    
 
     async function readFirmwareVersion() {
       try {
