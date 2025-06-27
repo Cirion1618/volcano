@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<!-- !!!!!!!!!! ES Funktioniert! Dieser Code Funktioniert genau so wie ich es mir vorgestellt habe für die erste Version. 22.06.2025 -->
-
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.28</title>
+  <title>Volcano Hybrid Test Control v0.29</title>
   <style>
     #log {
       max-height: 200px;
@@ -16,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.28)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.29)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -30,6 +28,8 @@
   <script>
     let server, service, device;
     let abortFlag = false;
+    let workflowActive = false;
+    let polling = false;
     const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
     const pumpOnUUID = '10110013-5354-4f52-5a26-4249434b454c';
     const pumpOffUUID = '10110014-5354-4f52-5a26-4249434b454c';
@@ -59,7 +59,7 @@
 
     async function connect() {
       try {
-         const storedId = localStorage.getItem('volcanoDeviceId');
+        const storedId = localStorage.getItem('volcanoDeviceId');
         if (storedId) {
           const devices = await navigator.bluetooth.getDevices();
           device = devices.find(d => d.id === storedId);
@@ -70,7 +70,7 @@
             acceptAllDevices: true,
             optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
           });
-          <!--localStorage.setItem('volcanoDeviceId', device.id);-->
+          // localStorage.setItem('volcanoDeviceId', device.id);
           console.log(device.name);
         }
 
@@ -82,7 +82,10 @@
         log("Connected to device: " + device.name);
 
         await readFirmwareVersion();
-        setInterval(updateStatuses, 3000);
+
+        // Start polling statuses in a safe loop (Option 2)
+        polling = true;
+        pollStatuses();
       } catch (err) {
         document.getElementById("status").innerText = `Connection failed: ${err.message}`;
         log("Connection error: " + err);
@@ -104,6 +107,7 @@
     }
 
     async function runWorkflowX() {
+      workflowActive = true;
       abortFlag = false;
       log("========= START WORKFLOW v0.25 =========");
 
@@ -161,6 +165,8 @@
         } else {
           log("⚠️ Error during workflow: " + e);
         }
+      } finally {
+        workflowActive = false;
       }
     }
 
@@ -232,6 +238,17 @@
         document.getElementById("heaterStatus").innerText = heaterOn ? "ON" : "OFF";
       } catch (err) {
         log("⚠️ Error updating statuses: " + err);
+      }
+    }
+
+    // Option 2: Safe polling loop for updateStatuses
+    async function pollStatuses() {
+      while (polling) {
+        // Only update statuses if no workflow is running
+        if (!workflowActive) {
+          await updateStatuses();
+        }
+        await sleep(3000); // Sleep between polls
       }
     }
   </script>
