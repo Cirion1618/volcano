@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.30</title>
+  <title>Volcano Hybrid Test Control v0.31</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.30)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.31)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -36,7 +36,7 @@
 
     const workflowX_temperature = [175, 180, 185, 190, 195];
     const workflowX_holdTimeInMilliSeconds = [10000, 5000, 5000, 5000, 5000];
-    const workflowX_pumpTimeInMilliSeconds = [7000, 7000, 7000, 8000, 9000];
+    const workflowX_pumpTimeInMilliSeconds = [6000, 6000, 7000, 7000, 8000];
 
     function log(msg) {
       const now = new Date();
