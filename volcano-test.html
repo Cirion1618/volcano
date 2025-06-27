@@ -144,14 +144,15 @@
           log(`⏳ Holding for ${holdTime}ms`);
           await wait(holdTime);
 
-          if (pumpTime > 0) {
-            log(`💨 Pumping for ${pumpTime}ms`);
-            await startPumpOnly();
-            await wait(pumpTime);
-            await stopPump();
-          } else {
-            log("Skipping pump phase");
-          }
+         if (pumpTime > 0) {
+          await startPumpOnly();
+          log(`💨 Pump ON for ${pumpTime}ms`);
+          await wait(pumpTime);
+          await stopPump();
+          log("🛑 Pump OFF");
+        } else {
+          log("⏭️ Skipping pump phase");
+        }
 
           await wait(500);
         }
