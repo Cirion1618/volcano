@@ -59,14 +59,10 @@
 
     async function connect() {
       try {
-        const storedId = localStorage.getItem('volcanoDeviceId');
+         const storedId = localStorage.getItem('volcanoDeviceId');
         if (storedId) {
-            device = await navigator.bluetooth.requestDevice({
-            filters:[
-               { name: 'S&B VOLCANO H' },
-            ]
-            acceptAllDevices: true,
-            optionalServices: [serviceUUID, '10100000-5354-4f52-5a26-4249434b454c']
+          const devices = await navigator.bluetooth.getDevices();
+          device = devices.find(d => d.id === storedId);
         }
 
         if (!device) {
