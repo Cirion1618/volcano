@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.31</title>
+  <title>Volcano Hybrid Test Control v0.32</title>
   <style>
     #log {
       max-height: 200px;
@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.31)</h2>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.32)</h2>
   <button onclick="connect()">🔗 Connect to Volcano</button>
   <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
   <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
@@ -109,69 +109,71 @@
     }
 
     async function runWorkflowX() {
-      workflowActive = true;
-      abortFlag = false;
-      log("========= START WORKFLOW v0.25 =========");
-
-      try {
+    workflowActive = true;
+    abortFlag = false;
+    log("========= START WORKFLOW v0.32 =========");
+  
+    try {
+      await stopPump();
+      await sleep(300);
+      await stopHeater();
+      await sleep(300);
+  
+      for (let i = 0; i < workflowX_temperature.length; i++) {
+        if (abortFlag) throw new Error("Aborted");
+  
+        const targetTemp = workflowX_temperature[i] * 10;
+        const holdTime = workflowX_holdTimeInMilliSeconds[i];
+        const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
+  
+        log(`🧭 STEP ${i + 1}: Target ${targetTemp / 10}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
+  
         await stopPump();
         await sleep(300);
-        await stopHeater();
-        await sleep(300);
-
-        for (let i = 0; i < workflowX_temperature.length; i++) {
-          if (abortFlag) throw new Error("Aborted");
-
-          const targetTemp = workflowX_temperature[i] * 10;
-          const holdTime = workflowX_holdTimeInMilliSeconds[i];
-          const pumpTime = workflowX_pumpTimeInMilliSeconds[i];
-
-          log(`🧭 STEP ${i + 1}: Target ${targetTemp / 10}°C, Hold ${holdTime}ms, Pump ${pumpTime}ms`);
-
-          await stopPump();
-          await sleep(300);
-
-          await setTemperature(targetTemp);
-          await wait(2000);
-          if (abortFlag) throw new Error("Aborted");
-
-          await startHeater();
-          await wait(500);
-
-          await waitForTemp(targetTemp);
-          if (abortFlag) throw new Error("Aborted");
-
-          log(`⏳ Holding for ${holdTime}ms`);
-          await wait(holdTime);
-
-         if (pumpTime > 0) {
+  
+        await setTemperature(targetTemp);
+        await wait(2000);
+        if (abortFlag) throw new Error("Aborted");
+  
+        await startHeater();
+        await wait(500);
+  
+        await waitForTemp(targetTemp);
+        if (abortFlag) throw new Error("Aborted");
+  
+        log(`⏳ Holding for ${holdTime}ms`);
+        await preciseWait(holdTime);
+        if (abortFlag) throw new Error("Aborted");
+  
+        if (pumpTime > 0) {
           await startPumpOnly();
-          log(`💨 Pump ON for ${pumpTime}ms`);
-          await wait(pumpTime);
+          log(`💨 Pumping for ${pumpTime}ms`);
+          await preciseWait(pumpTime);
           await stopPump();
           log("🛑 Pump OFF");
         } else {
           log("⏭️ Skipping pump phase");
         }
-
-          await wait(500);
-        }
-
+  
+        await wait(500);
+      }
+  
+      await stopPump();
+      await stopHeater();
+      log("✅ Workflow completed.");
+    } catch (e) {
+      if (e.message === "Aborted") {
+        log("❌ Workflow aborted.");
         await stopPump();
         await stopHeater();
-        log("✅ Workflow completed.");
-      } catch (e) {
-        if (e.message === "Aborted") {
-          log("❌ Workflow aborted.");
-          await stopPump();
-          await stopHeater();
-        } else {
-          log("⚠️ Error during workflow: " + e);
-        }
-      } finally {
-        workflowActive = false;
+      } else {
+        log("⚠️ Error during workflow: " + e);
       }
+    } finally {
+      workflowActive = false;
     }
+  }
+
 
     function abortWorkflow() {
       log("❌ Abort requested.");
@@ -212,14 +214,26 @@
       log("✅ Target temperature reached");
     }
 
+    let pumpSafetyTimer = null;
+    
     async function startPumpOnly() {
       const char = await service.getCharacteristic(pumpOnUUID);
       await char.writeValue(new Uint8Array([0x01]));
       document.getElementById("pumpStatus").innerText = "ON";
       log("💨 Pump ON");
+    
+      // Failsafe: Pumpe wird nach 20 Sekunden automatisch gestoppt
+      pumpSafetyTimer = setTimeout(() => {
+        stopPump();
+        log("⛑️ Failsafe: Pump auto-stopped after timeout");
+      }, 20000);
     }
-
+    
     async function stopPump() {
+      if (pumpSafetyTimer) {
+        clearTimeout(pumpSafetyTimer);
+        pumpSafetyTimer = null;
+      }
       const char = await service.getCharacteristic(pumpOffUUID);
       await char.writeValue(new Uint8Array([0x00]));
       document.getElementById("pumpStatus").innerText = "OFF";
@@ -254,6 +268,19 @@
         await sleep(3000); // Sleep between polls
       }
     }
+
+    async function preciseWait(ms) {
+    const start = performance.now();
+    while (performance.now() - start < ms) {
+      if (abortFlag) throw new Error("Aborted");
+      await sleep(50); // kleiner Intervall für Reaktionsfähigkeit
+      }
+    }
+
+    
+
+
+    
   </script>
 </body>
 </html>
