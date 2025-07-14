@@ -2,27 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volcano Hybrid Test Control v0.32</title>
+  <title>Volcano Hybrid Test Control v0.33</title>
   <style>
+    body {
+      background:#1e1e1e;
+      color:#f9f9f9;
+      font-family:Arial,Helvetica,sans-serif;
+      margin:2em;
+    }
+    h2 {
+      text-align:center;
+      margin-bottom:1em;
+    }
+    button {
+      background:#333;
+      color:#fff;
+      border:1px solid #555;
+      padding:0.5em 1em;
+      margin:0.3em;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    button:hover {background:#444;}
+    #controls,#manual {text-align:center;margin-bottom:1em;}
     #log {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #f0f0f0;
-      padding: 1em;
-      font-family: monospace;
+      max-height:200px;
+      overflow-y:auto;
+      background:#262626;
+      padding:1em;
+      font-family:monospace;
+      border-radius:4px;
+      border:1px solid #444;
+    }
+    #progressContainer{
+      width:100%;
+      background:#333;
+      border-radius:5px;
+      height:15px;
+      margin:1em 0;
+    }
+    #progress{
+      height:100%;
+      width:0%;
+      background:limegreen;
+      border-radius:5px;
+      transition:width 0.3s;
     }
   </style>
 </head>
 <body>
-  <h2>Volcano Hybrid - Advanced Control Panel (v0.32)</h2>
-  <button onclick="connect()">🔗 Connect to Volcano</button>
-  <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
-  <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
+  <h2>Volcano Hybrid - Advanced Control Panel (v0.33)</h2>
+  <div id="controls">
+    <button onclick="connect()">🔗 Connect to Volcano</button>
+    <button onclick="runWorkflowX()">🚀 Start Custom Workflow X</button>
+    <button onclick="abortWorkflow()">⛔ Abort Workflow</button>
+    <button onclick="clearLog()">🧹 Clear Log</button>
+  </div>
+
+  <div id="manual">
+    <input type="number" id="manualTemp" placeholder="Temp °C" min="40" max="230" />
+    <button onclick="setManualTemperature()">Set Temp</button>
+    <button id="pumpToggle" onclick="togglePump()">Start Pump</button>
+  </div>
+
   <p id="status">Status: Not connected</p>
   <p>Current Temperature: <span id="currentTemp">-</span>°C</p>
   <p>Heater Status: <span id="heaterStatus">Unknown</span></p>
   <p>Pump Status: <span id="pumpStatus">Unknown</span></p>
   <p>Firmware Version: <span id="firmwareVersion">-</span></p>
+  <div id="progressContainer"><div id="progress"></div></div>
   <div id="log"></div>
 
   <script>
@@ -30,6 +78,7 @@
     let abortFlag = false;
     let workflowActive = false;
     let polling = false;
+    let pumpRunning = false;
     const serviceUUID = '10110000-5354-4f52-5a26-4249434b454c';
     const pumpOnUUID = '10110013-5354-4f52-5a26-4249434b454c';
     const pumpOffUUID = '10110014-5354-4f52-5a26-4249434b454c';
@@ -48,6 +97,37 @@
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function updateProgress(percent) {
+      const bar = document.getElementById('progress');
+      if (bar) bar.style.width = percent + '%';
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerText = '';
+    }
+
+    async function setManualTemperature() {
+      const val = parseInt(document.getElementById('manualTemp').value, 10);
+      if (isNaN(val)) {
+        log('⚠️ Enter a valid temperature');
+        return;
+      }
+      await setTemperature(val * 10);
+      await startHeater();
+    }
+
+    async function togglePump() {
+      if (!pumpRunning) {
+        await startPumpOnly();
+        pumpRunning = true;
+        document.getElementById('pumpToggle').innerText = 'Stop Pump';
+      } else {
+        await stopPump();
+        pumpRunning = false;
+        document.getElementById('pumpToggle').innerText = 'Start Pump';
+      }
     }
 
     async function wait(ms) {
@@ -111,7 +191,8 @@
     async function runWorkflowX() {
     workflowActive = true;
     abortFlag = false;
-    log("========= START WORKFLOW v0.32 =========");
+    updateProgress(0);
+    log("========= START WORKFLOW v0.33 =========");
   
     try {
       await stopPump();
@@ -156,14 +237,17 @@
         }
   
         await wait(500);
+        updateProgress(((i + 1) / workflowX_temperature.length) * 100);
       }
   
       await stopPump();
       await stopHeater();
+      updateProgress(100);
       log("✅ Workflow completed.");
     } catch (e) {
       if (e.message === "Aborted") {
         log("❌ Workflow aborted.");
+        updateProgress(0);
         await stopPump();
         await stopHeater();
       } else {
